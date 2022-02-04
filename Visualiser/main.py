@@ -1,4 +1,3 @@
-from tkinter import Widget
 import pygame
 
 WIDTH, HEIGHT = 700, 700
