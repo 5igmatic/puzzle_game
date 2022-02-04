@@ -1,4 +1,3 @@
-from tkinter import CENTER, HORIZONTAL
 import pygame
 
 WIDTH, HEIGHT = 700, 600
