@@ -1,7 +1,7 @@
 import pygame
 import math
 
-class player(pygame.sprite.Sprite):
+class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.size = 100
@@ -55,7 +55,9 @@ class player(pygame.sprite.Sprite):
             direction = -1
             if self.right: direction = 1
             angle = 90 + direction*45 - direction*self.animationFrame*90/self.walkFrames
+            print(angle)
             radians = angle * math.pi / 180
+            print(radians)
             self.x = self.walkPivot[0] + self.size/math.sqrt(2) * math.cos(radians)
             self.y = self.walkPivot[1] - self.size/math.sqrt(2) * math.sin(radians)
             self.rotation = angle - 90 - direction * 45
