@@ -1,24 +1,30 @@
 from tile import Tile
 
 class World:
-    def __init__(self):
+    def __init__(self, size):
         self.levels = [["tttttt",
                         "t    t",
                         "t    t",
                         "tttttt"]]
         self.tiles = [[]]
+        self.size = size
 
-    def load(self, currentLevel, offset, size):
-        leveldata = self.levels[currentLevel]
-        rowindex = 0
-        for row in leveldata:
-            print(rowindex)
-            tileindex = 0
+    def load(self, currentLevel, offset):
+        levelData = self.levels[currentLevel]
+        rowIndex = 0
+        for row in levelData:
+            print(rowIndex)
+            tileIndex = 0
             for tile in row:
-                print(tileindex)
-                self.tiles[rowindex].append(Tile(offset, (rowindex, tileindex), size))
-                tileindex += 1
+                if tile != " ":
+                    self.tiles[rowIndex].append(Tile(tile, offset, (tileIndex, rowIndex), self.size))
+                tileIndex += 1
             self.tiles.append([])
-            rowindex += 1
+            rowIndex += 1
+
+    def update(self, WIN):
+        for row in self.tiles:
+            for tile in row:
+                tile.update(WIN)
 
 

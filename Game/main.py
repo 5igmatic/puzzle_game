@@ -6,12 +6,13 @@ WIDTH, HEIGHT = 800, 600
 WIN = pygame.display.set_mode((WIDTH, HEIGHT), vsync=1)
 
 FPS = 60
+size = 80
 
 clock = pygame.time.Clock()
 
 #Jeff is a basic square, basic sounds like Bezos, Bezos -> Jeff, also Jeff is a basic name
-jeff = Player()
-world = World()
+jeff = Player(size)
+world = World(size)
 
 
 def calculateMovement():
@@ -21,10 +22,11 @@ def calculateMovement():
 def update():
     WIN.fill("black")
     WIN.blit(jeff.image, jeff.rect)
+    world.update(WIN)
     pygame.display.update()
 
 def main():
-    world.load(0, (0, 0), 80)
+    world.load(0, (60, 140))
     while True:
         clock.tick(FPS)
         for event in pygame.event.get():

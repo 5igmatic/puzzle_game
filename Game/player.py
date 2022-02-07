@@ -2,9 +2,9 @@ import pygame
 import math
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, size):
         super().__init__()
-        self.size = 100
+        self.size = size
         self.x = 300
         self.y = 300
         self.rotation = 0
