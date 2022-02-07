@@ -1,5 +1,3 @@
-from logging import setLogRecordFactory
-from tkinter import CENTER
 import pygame
 
 class Tile(pygame.sprite.Sprite):
