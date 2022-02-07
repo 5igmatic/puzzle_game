@@ -10,9 +10,9 @@ size = 80
 
 clock = pygame.time.Clock()
 
-#Jeff is a basic square, basic sounds like Bezos, Bezos -> Jeff, also Jeff is a basic name
-jeff = Player(size)
 world = World(size)
+#Jeff is a basic square, basic sounds like Bezos, Bezos -> Jeff, also Jeff is a basic name
+jeff = Player(size, world)
 
 
 def calculateMovement():

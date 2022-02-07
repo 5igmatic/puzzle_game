@@ -2,12 +2,14 @@ import pygame
 import math
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, size):
+    def __init__(self, size, world):
         super().__init__()
         self.size = size
         self.x = 300
         self.y = 300
         self.rotation = 0
+
+        self.world = world
 
         self.original_image = pygame.Surface((self.size, self.size)).convert_alpha()
         self.original_image.fill("white")
@@ -33,13 +35,12 @@ class Player(pygame.sprite.Sprite):
 
     def checkInputs(self):
         keys = pygame.key.get_pressed()
-        #check if blocked
-        if keys[pygame.K_a]:
+        if keys[pygame.K_a] and not self.world.isBlocked(False):
             self.walking = True
             self.right = False
             self.moving = True
             self.walkPivot = (self.x - self.size/2, self.y + self.size/2)
-        elif keys[pygame.K_d]:
+        elif keys[pygame.K_d] and not self.world.isBlocked(True):
             self.walking = True
             self.right = True
             self.moving = True
@@ -47,6 +48,7 @@ class Player(pygame.sprite.Sprite):
 
     def walk(self):
         if self.animationFrame >= self.walkFrames:
+            self.world.updateLocation(self.right)
             self.moving = False
             self.walking = False
             self.animationFrame = 0
@@ -55,9 +57,7 @@ class Player(pygame.sprite.Sprite):
             direction = -1
             if self.right: direction = 1
             angle = 90 + direction*45 - direction*self.animationFrame*90/self.walkFrames
-            print(angle)
             radians = angle * math.pi / 180
-            print(radians)
             self.x = self.walkPivot[0] + self.size/math.sqrt(2) * math.cos(radians)
             self.y = self.walkPivot[1] - self.size/math.sqrt(2) * math.sin(radians)
             self.rotation = angle - 90 - direction * 45

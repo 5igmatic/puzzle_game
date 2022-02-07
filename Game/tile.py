@@ -8,7 +8,6 @@ class Tile(pygame.sprite.Sprite):
             self.image = pygame.Surface((size, size)).convert_alpha()
             self.image.fill("white")
             pos = (offset[0]+location[0]*size, offset[1]+location[1]*size)
-            print(pos)
             self.rect = self.image.get_rect(center = pos)
 
     def update(self, WIN):
