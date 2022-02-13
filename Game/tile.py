@@ -13,5 +13,5 @@ class Tile(pygame.sprite.Sprite):
             self.image.fill((255, 0, 0, 150))
 
         
-        pos = (offset[0]+location[0]*size, offset[1]+location[1]*size)
-        self.rect = self.image.get_rect(center = pos)
+        self.x = offset[0]+location[0]*size
+        self.y = offset[1]+location[1]*size

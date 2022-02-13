@@ -15,7 +15,6 @@ class Player(pygame.sprite.Sprite):
         self.original_image = pygame.Surface((self.size, self.size)).convert_alpha()
         self.original_image.fill("red")
         self.image = self.original_image
-        self.rect = self.image.get_rect(center = (self.x, self.y))
         self.rotation = 0
         self.moving = False
         self.walking = False
@@ -36,7 +35,6 @@ class Player(pygame.sprite.Sprite):
         if self.walking:
             self.walk()
         self.setRotation()
-        self.rect = self.image.get_rect(center = (self.x, self.y))
 
     def checkInputs(self):
         if self.world.isFalling(self.type):

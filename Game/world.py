@@ -75,7 +75,6 @@ class World:
         players = len(self.currentPlayers.sprites())
         self.activePlayerIndex += shift
         self.activePlayerIndex %= players
-        print(self.activePlayerIndex)
 
     def doMovement(self):
         for index,player in enumerate(self.currentPlayers):
@@ -85,14 +84,23 @@ class World:
         if(self.playerChangeCooldown > 0):
             self.playerChangeCooldown -= 1
 
-    def updateIndividual(self, object, WIN):
-        WIN.blit(object.image, object.rect)
+    def updateIndividual(self, object, WIN, shiftX, shiftY):
+        rect = object.image.get_rect(center = (object.x + shiftX, object.y + shiftY))
+        WIN.blit(object.image, rect)
 
     def update(self, WIN):
+        screenCenterX = WIN.get_width()/2
+        screenCenterY = WIN.get_height()/2
+        for index,player in enumerate(self.currentPlayers):
+            if index == self.activePlayerIndex:
+                focusX = player.x
+                focusY = player.y
+        shiftX = screenCenterX - focusX
+        shiftY = screenCenterY - focusY
         for tile in self.tiles:
-            self.updateIndividual(tile, WIN)
+            self.updateIndividual(tile, WIN, shiftX, shiftY)
         for player in self.currentPlayers:
-            self.updateIndividual(player, WIN)
+            self.updateIndividual(player, WIN, shiftX, shiftY)
 
     #update for jump compatability
     #Accessed by the Player class
