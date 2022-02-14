@@ -6,19 +6,12 @@ WIN = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE, vsync=1)
 
 FPS = 60
 size = 80
-offset = (60, 140)
-startLevel = 0
-
+startLevel = 1
 
 clock = pygame.time.Clock()
 
-world = World(size, offset, startLevel)
+world = World(size, startLevel)
 
-
-def calculateMovement():
-    world.doMovement()
-    
-    
 def update():
     WIN.fill("black")
     world.update(WIN)
@@ -40,7 +33,7 @@ def main():
                 WIN.blit(pygame.transform.scale(WIN, WIN.get_size()), (0, 0))
                 pygame.display.update()
 
-        calculateMovement()
+        world.doMovement()
         update()
 
 if __name__ == "__main__":

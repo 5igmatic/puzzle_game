@@ -2,8 +2,9 @@ import pygame
 import math
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, type, size, x, y, world):
+    def __init__(self, index, type, size, x, y, world):
         super().__init__()
+        self.index = index
         self.type = type
         self.size = size
         self.x = x
@@ -37,17 +38,17 @@ class Player(pygame.sprite.Sprite):
         self.setRotation()
 
     def checkInputs(self):
-        if self.world.isFalling(self.type):
+        if self.world.isFalling(self.index):
             self.moving = True
             self.falling = True
         else:
             keys = pygame.key.get_pressed()
-            if keys[pygame.K_a] and not self.world.isBlocked(self.type, False):
+            if keys[pygame.K_a] and not self.world.isBlocked(self.index, False):
                 self.walking = True
                 self.right = False
                 self.moving = True
                 self.walkPivot = (self.x - self.size/2, self.y + self.size/2)
-            elif keys[pygame.K_d] and not self.world.isBlocked(self.type, True):
+            elif keys[pygame.K_d] and not self.world.isBlocked(self.index, True):
                 self.walking = True
                 self.right = True
                 self.moving = True
@@ -65,7 +66,7 @@ class Player(pygame.sprite.Sprite):
                 shift = [1, 0]
             else:
                 shift = [-1, 0]
-            self.world.updateLocation(self.type, shift)
+            self.world.updateLocation(self.index, shift)
             self.moving = False
             self.walking = False
             self.animationFrame = 0
@@ -82,7 +83,7 @@ class Player(pygame.sprite.Sprite):
     def fall(self):
         if self.animationFrame >= self.fallFrames:
             shift = [0, 1]
-            self.world.updateLocation(self.type, shift)
+            self.world.updateLocation(self.index, shift)
             self.moving = False
             self.falling = False
             self.animationFrame = 0

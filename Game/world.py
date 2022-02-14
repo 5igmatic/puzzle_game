@@ -3,37 +3,36 @@ from player import Player
 import pygame
 
 class World:
-    def __init__(self, size, offset, startLevel):
-        self.traversableTiles = " 0"
+    def __init__(self, size, startLevel):
+        self.traversableTiles = " 01"
 
-        self.levels = {0: ["ttttttt",
+        self.levels = {1: ["ttttttt",
                            "t     t",
                            "t    0t",
                            "ttttttt"],
             
-                       1: ["ttttttt",
+                       2: ["ttttttt",
                            "t     t",
                            "t     t",
                            "tttt 0t",
                            "   tttt"],
                            
-                       2: ["ttttttttt",
+                       3: ["ttttttttt",
                            "t       t",
                            "t       t",
                            "t       t",
                            "t       t",
-                           "t      0t",
+                           "t0     0t",
                            "ttttttttt"]}
-        #players (start location)
-        self.levelData = {0: [[0, [2, 2]]],
-                          1: [[0, [3, 2]]],
-                          2: [[0, [3, 4]]]}
+        #playerType (start location)
+        self.levelData = {1: [[0, [2, 2]]],
+                          2: [[0, [2, 2]]],
+                          3: [[0, [6, 5]], [0, [3, 5]]]}
         self.tiles = pygame.sprite.Group()
         self.size = size
-        self.offset = offset
-        self.playerLocations = {"square": [0, 0]}
+        self.playerLocations = []
         self.currentLevel = startLevel
-        self.players = ["square"]
+        self.players = [0, 1]
         self.currentPlayers = pygame.sprite.Group()
         self.activePlayerIndex = 0
 
@@ -44,6 +43,7 @@ class World:
     def load(self):
         self.tiles.empty()
         self.currentPlayers.empty()
+        self.playerLocations.clear()
         levelLayout = self.levels[self.currentLevel]
         self.getCurrentPlayers()
         rowIndex = 0
@@ -51,21 +51,19 @@ class World:
             tileIndex = 0
             for tile in row:
                 if tile != " ":
-                    self.tiles.add(Tile(tile, self.offset, (tileIndex, rowIndex), self.size))
+                    self.tiles.add(Tile(tile, (tileIndex, rowIndex), self.size))
                 tileIndex += 1
             rowIndex += 1
 
     def getCurrentPlayers(self):
         currentLevelData = self.levelData[self.currentLevel]
-        first = True
-        for playerData in currentLevelData:
-            playerIndex = playerData[0]
+        for playerIndex, playerData in enumerate(currentLevelData):
+            playerType = playerData[0]
             playerPosition = playerData[1]
-            playerType = self.players[playerIndex]
-            self.playerLocations[playerType] = playerPosition
-            x = playerPosition[0]*self.size + self.offset[0]
-            y = playerPosition[1]*self.size + self.offset[1]
-            player = Player(playerType, self.size, x, y, self)
+            self.playerLocations.append(playerPosition)
+            x = playerPosition[0]*self.size
+            y = playerPosition[1]*self.size
+            player = Player(playerIndex, playerType, self.size, x, y, self)
             self.currentPlayers.add(player)
         self.activePlayerIndex = 0
 
@@ -117,14 +115,20 @@ class World:
             moveLocation[0] += 1
         else:
             moveLocation[0] -= 1
+        for playerLocation in self.playerLocations:
+            if playerLocation == [moveLocation[0], moveLocation[1]]:
+                return True
         if self.levels[self.currentLevel][moveLocation[1]][moveLocation[0]] in self.traversableTiles:
             return False
+        #print(moveLocation)
         return True
 
     def isFalling(self, player):
         moveLocation = list(self.playerLocations[player])
         moveLocation[1] += 1
-        if self.levels[self.currentLevel][moveLocation[1]][moveLocation[0]] in self.traversableTiles:
+        if self.levels[self.currentLevel][moveLocation[1]][moveLocation[0]] in self.traversableTiles:   
+            print(moveLocation)
+            print(self.levels[self.currentLevel][moveLocation[1]][moveLocation[0]])
             return True
         return False
 
@@ -133,10 +137,10 @@ class World:
         complete = True
 
         for player in self.currentPlayers:
-            playerClass = player.type
-            location = self.playerLocations[playerClass]
-            playerGoalID = self.players.index(playerClass)
-            if level[location[1]][location[0]] != str(playerGoalID):
+            playerType = player.type
+            playerIndex = player.index
+            location = self.playerLocations[playerIndex]
+            if level[location[1]][location[0]] != str(playerType):
                 complete = False
 
         if complete:
