@@ -1,6 +1,7 @@
 from tile import Tile
 from player import Player
 import pygame
+import copy
 
 class World:
     def __init__(self, size, startLevel):
@@ -22,12 +23,12 @@ class World:
                            "t       t",
                            "t       t",
                            "t       t",
-                           "t0     0t",
+                           "t0     1t",
                            "ttttttttt"]}
         #playerType (start location)
         self.levelData = {1: [[0, [2, 2]]],
                           2: [[0, [2, 2]]],
-                          3: [[0, [6, 5]], [0, [3, 5]]]}
+                          3: [[0, [6, 4]], [1, [3, 5]]]}
         self.tiles = pygame.sprite.Group()
         self.size = size
         self.playerLocations = []
@@ -35,6 +36,12 @@ class World:
         self.players = [0, 1]
         self.currentPlayers = pygame.sprite.Group()
         self.activePlayerIndex = 0
+        self.previousPlayerIndex = 0
+
+        self.playerMovementInstruction = {"fall": [[[0, 1]], [[], [[0, 1], [0, 1]]]],
+                                          "walk": [[[1, 0], [0, -1], [1, -1]], [[], [], [], [[1, 1], [1, 0]]]],
+                                          "jump": [[[1, 0], [0, -1], [1, -1], [0, -2], [1, -2], [1, -3], [2, -2], [2, -3], [3, -3], [3, -2], [4, -2], [4, -1], [4, 0], [5, 1]], 
+                                                  [[], [], [], [[2, 1/3], [2, -1/3], [0, 0]], [[2, 0.4], [2, -0.4], [0, 0]], [[2, 1], [1, -2]], [[2, 1], [1, -2]], [[2, 1], [1, -2]], [[2, 2], [0, 2/3], [2, -2]], [[2, 2], [0, 2/3], [2, -2]], [[2, 3], [3, -2]], [[2, 3], [3, -2]], [[2, 3.4792], [1, 0.5208], [4, -1]], [[2, 4], [4, 0]], []]]}
 
         self.playerChangeCooldown = 0
         #the player can only change Players every 30 frames
@@ -71,6 +78,7 @@ class World:
     def changePlayer(self, shift):
         self.playerChangeCooldown = self.playerChangeCooldownDuration
         players = len(self.currentPlayers.sprites())
+        self.previousPlayerIndex = self.activePlayerIndex
         self.activePlayerIndex += shift
         self.activePlayerIndex %= players
 
@@ -81,6 +89,8 @@ class World:
 
         if(self.playerChangeCooldown > 0):
             self.playerChangeCooldown -= 1
+            if(self.playerChangeCooldown == 0):
+                self.previousPlayerIndex = self.activePlayerIndex
 
     def updateIndividual(self, object, WIN, shiftX, shiftY):
         rect = object.image.get_rect(center = (object.x + shiftX, object.y + shiftY))
@@ -89,10 +99,18 @@ class World:
     def update(self, WIN):
         screenCenterX = WIN.get_width()/2
         screenCenterY = WIN.get_height()/2
+        focusX = 0
+        focusY = 0
+        previousWeight = self.playerChangeCooldown/self.playerChangeCooldownDuration
+        activeWeight = 1 - previousWeight
         for index,player in enumerate(self.currentPlayers):
             if index == self.activePlayerIndex:
-                focusX = player.x
-                focusY = player.y
+                focusX += player.x * activeWeight
+                focusY += player.y * activeWeight
+            if index == self.previousPlayerIndex:
+                focusX += player.x * previousWeight
+                focusY += player.y * previousWeight
+
         shiftX = screenCenterX - focusX
         shiftY = screenCenterY - focusY
         for tile in self.tiles:
@@ -107,30 +125,37 @@ class World:
         self.playerLocations[player][1] += shift[1]
         self.checkCompletion()
 
-    #update for jump compatability
-    #Accessed by the Player class
-    def isBlocked(self, player, right):
-        moveLocation = list(self.playerLocations[player])
-        if right:
-            moveLocation[0] += 1
-        else:
-            moveLocation[0] -= 1
+
+    #returns if the region being moved into is blocked
+    def isBlocked(self, moveLocation):
         for playerLocation in self.playerLocations:
-            if playerLocation == [moveLocation[0], moveLocation[1]]:
-                return True
+                if playerLocation == [moveLocation[0], moveLocation[1]]:
+                    return True
         if self.levels[self.currentLevel][moveLocation[1]][moveLocation[0]] in self.traversableTiles:
             return False
-        #print(moveLocation)
         return True
 
-    def isFalling(self, player):
-        moveLocation = list(self.playerLocations[player])
-        moveLocation[1] += 1
-        if self.levels[self.currentLevel][moveLocation[1]][moveLocation[0]] in self.traversableTiles:   
-            print(moveLocation)
-            print(self.levels[self.currentLevel][moveLocation[1]][moveLocation[0]])
-            return True
-        return False
+    #accessed by the Player class
+    def move(self, player, movementType, right):
+        moveOrigin = list(self.playerLocations[player])
+        multiplier = 1
+        if not right:
+            multiplier = -1
+
+        instructions = copy.deepcopy(self.playerMovementInstruction[movementType])
+        checkList = instructions[0]
+        directions = instructions[1]
+
+        for index,check in enumerate(checkList):
+            moveLocation = [moveOrigin[0]+check[0]*multiplier, moveOrigin[1]+check[1]]
+            if self.isBlocked(moveLocation):
+                return directions[index]
+        return directions[-1]
+
+    # def isFallBlocked(self, player):
+    #     moveLocation = list(self.playerLocations[player])
+    #     moveLocation[1] += 1
+    #     return self.isBlocked(moveLocation)
 
     def checkCompletion(self):
         level = self.levels[self.currentLevel]

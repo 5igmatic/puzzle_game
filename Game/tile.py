@@ -12,6 +12,9 @@ class Tile(pygame.sprite.Sprite):
         if tile == "0":
             self.image.fill((255, 0, 0, 150))
 
+        if tile == "1":
+            self.image.fill((0, 255, 0, 150))
+
         
         self.x = location[0]*size
         self.y = location[1]*size
