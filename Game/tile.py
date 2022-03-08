@@ -5,16 +5,13 @@ class Tile(pygame.sprite.Sprite):
         super().__init__()
 
         self.image = pygame.Surface((size, size)).convert_alpha()
+        self.type = tile
         if tile == "t":
-            self.image.fill("white")
-
-        #goal tiles
-        if tile == "0":
-            self.image.fill((255, 0, 0, 150))
-
-        if tile == "1":
-            self.image.fill((0, 255, 0, 150))
-
+            self.image.fill("grey")
         
-        self.x = location[0]*size
-        self.y = location[1]*size
+        self.x = location[0]
+        self.y = location[1]
+
+    # def updateSize(self, size):
+    #     self.size = size
+    #     self.image = pygame.transform.scale(self.image, (size, size))

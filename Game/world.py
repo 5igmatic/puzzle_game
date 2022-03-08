@@ -1,10 +1,9 @@
 from tile import Tile
 from player import Player
 import pygame
-import copy
 
 class World:
-    def __init__(self, size, startLevel):
+    def __init__(self, size, startLevel, font, fontScaler):
         self.traversableTiles = " 01"
 
         self.levels = {1: ["ttttttt",
@@ -12,47 +11,58 @@ class World:
                            "t    0t",
                            "ttttttt"],
             
-                       2: ["ttttttt",
-                           "t     t",
-                           "t     t",
-                           "tttt 0t",
-                           "   tttt"],
+                       2: ["ttttttttt",
+                           "t       t",
+                           "t       t",
+                           "t       t",
+                           "tttt   0t",
+                           "   t    t",
+                           "   t    t",
+                           "   t    t",
+                           "   tttttt"],
                            
                        3: ["ttttttttt",
                            "t       t",
                            "t       t",
                            "t       t",
                            "t       t",
-                           "t0     1t",
+                           "t       t",
                            "ttttttttt"]}
         #playerType (start location)
         self.levelData = {1: [[0, [2, 2]]],
                           2: [[0, [2, 2]]],
-                          3: [[0, [6, 4]], [1, [3, 5]]]}
+                          3: [["4", [6, 4]], ["=", [3, 5]], ["2", [6, 5]], ["x", [5, 5]], ["2", [6, 3]]]}
+        self.playerPositionIndecies = []
+        self.playerPositionSymbols = []
         self.tiles = pygame.sprite.Group()
+
+        self.font = font
+        self.fontScaler = fontScaler
+
         self.size = size
-        self.playerLocations = []
+        self.trueSize = size
+        self.sizeScaler = 1.01
         self.currentLevel = startLevel
         self.players = [0, 1]
         self.currentPlayers = pygame.sprite.Group()
         self.activePlayerIndex = 0
         self.previousPlayerIndex = 0
 
-        self.playerMovementInstruction = {"fall": [[[0, 1]], [[], [[0, 1], [0, 1]]]],
-                                          "walk": [[[1, 0], [0, -1], [1, -1]], [[], [], [], [[1, 1], [1, 0]]]],
-                                          "jump": [[[1, 0], [0, -1], [1, -1], [0, -2], [1, -2], [1, -3], [2, -2], [2, -3], [3, -3], [3, -2], [4, -2], [4, -1], [4, 0], [5, 1]], 
-                                                  [[], [], [], [[2, 1/3], [2, -1/3], [0, 0]], [[2, 0.4], [2, -0.4], [0, 0]], [[2, 1], [1, -2]], [[2, 1], [1, -2]], [[2, 1], [1, -2]], [[2, 2], [0, 2/3], [2, -2]], [[2, 2], [0, 2/3], [2, -2]], [[2, 3], [3, -2]], [[2, 3], [3, -2]], [[2, 3.4792], [1, 0.5208], [4, -1]], [[2, 4], [4, 0]], []]]}
-
         self.playerChangeCooldown = 0
-        #the player can only change Players every 30 frames
+        #prevents the player from being changed within 30 frames of another change
         self.playerChangeCooldownDuration = 30
 
     def load(self):
         self.tiles.empty()
         self.currentPlayers.empty()
-        self.playerLocations.clear()
         levelLayout = self.levels[self.currentLevel]
+
+        rows = len(levelLayout)
+        columns = len(levelLayout[0])
+        self.playerPositionIndecies = [[None]*columns for i in range(rows)]
+        self.playerPositionSymbols = [[None]*columns for i in range(rows)]
         self.getCurrentPlayers()
+
         rowIndex = 0
         for row in levelLayout:
             tileIndex = 0
@@ -67,11 +77,12 @@ class World:
         for playerIndex, playerData in enumerate(currentLevelData):
             playerType = playerData[0]
             playerPosition = playerData[1]
-            self.playerLocations.append(playerPosition)
-            x = playerPosition[0]*self.size
-            y = playerPosition[1]*self.size
+            x = playerPosition[0]
+            y = playerPosition[1]
             player = Player(playerIndex, playerType, self.size, x, y, self)
             self.currentPlayers.add(player)
+            self.playerPositionIndecies[y][x] = playerIndex
+            self.playerPositionSymbols[y][x] = playerType
         self.activePlayerIndex = 0
 
     #Accessed by the Player class
@@ -82,92 +93,190 @@ class World:
         self.activePlayerIndex += shift
         self.activePlayerIndex %= players
 
+    def getPlayerFocus(self):
+        focusX = 0
+        focusY = 0
+        previousWeight = self.playerChangeCooldown/self.playerChangeCooldownDuration
+        activeWeight = 1 - previousWeight
+        for player in self.currentPlayers:
+            if player.index == self.activePlayerIndex:
+                focusX += player.x * activeWeight
+                focusY += player.y * activeWeight
+            if player.index == self.previousPlayerIndex:
+                focusX += player.x * previousWeight
+                focusY += player.y * previousWeight
+        return (focusX, focusY)
+
     def doMovement(self):
-        for index,player in enumerate(self.currentPlayers):
-            if index == self.activePlayerIndex:
+        for player in self.currentPlayers:
+            if player.index == self.activePlayerIndex:
                 player.doMovement()
 
         if(self.playerChangeCooldown > 0):
             self.playerChangeCooldown -= 1
             if(self.playerChangeCooldown == 0):
                 self.previousPlayerIndex = self.activePlayerIndex
+        self.checkCompletion()
 
     def updateIndividual(self, object, WIN, shiftX, shiftY):
-        rect = object.image.get_rect(center = (object.x + shiftX, object.y + shiftY))
+        x = round(self.size*(object.x + shiftX))
+        y = round(self.size*(object.y + shiftY))
+        rect = object.image.get_rect(center = (x, y))
         WIN.blit(object.image, rect)
 
-    def update(self, WIN):
-        screenCenterX = WIN.get_width()/2
-        screenCenterY = WIN.get_height()/2
-        focusX = 0
-        focusY = 0
-        previousWeight = self.playerChangeCooldown/self.playerChangeCooldownDuration
-        activeWeight = 1 - previousWeight
-        for index,player in enumerate(self.currentPlayers):
-            if index == self.activePlayerIndex:
-                focusX += player.x * activeWeight
-                focusY += player.y * activeWeight
-            if index == self.previousPlayerIndex:
-                focusX += player.x * previousWeight
-                focusY += player.y * previousWeight
+    # def updateSize(self):
+    #     keys = pygame.key.get_pressed()
+    #     if keys[pygame.K_UP]:
+    #         self.trueSize *= 1/self.sizeScaler
+    #         self.size = round(self.trueSize)
+    #         for tile in self.tiles:
+    #             tile.updateSize(self.size)
+    #         for player in self.currentPlayers:
+    #             player.updateSize(self.size)
+    #     if keys[pygame.K_DOWN]:
+    #         self.trueSize *= self.sizeScaler
+    #         self.size = round(self.trueSize)
+    #         for tile in self.tiles:
+    #             tile.updateSize(self.size)
+    #         for player in self.currentPlayers:
+    #             player.updateSize(self.size)
+        
+    #     print(self.size)
+        
 
-        shiftX = screenCenterX - focusX
-        shiftY = screenCenterY - focusY
+    def update(self, WIN):
+        #self.updateSize()
+        screenCenterX = WIN.get_width()/(2*self.size)
+        screenCenterY = WIN.get_height()/(2*self.size)
+        focus = self.getPlayerFocus()
+        shiftX = screenCenterX - focus[0]
+        shiftY = screenCenterY - focus[1]
         for tile in self.tiles:
             self.updateIndividual(tile, WIN, shiftX, shiftY)
         for player in self.currentPlayers:
             self.updateIndividual(player, WIN, shiftX, shiftY)
+            self.updateIndividual(player.text, WIN, shiftX, shiftY)
 
-    #update for jump compatability
-    #Accessed by the Player class
-    def updateLocation(self, player, shift):
-        self.playerLocations[player][0] += shift[0]
-        self.playerLocations[player][1] += shift[1]
-        self.checkCompletion()
+    def collision(self, checkPlayer):
+        collision = False
+        checkPlayerRect = checkPlayer.image.get_rect(center = (round(self.size*checkPlayer.x), round(self.size*checkPlayer.y)))
+        for tile in self.tiles:
+            tileRect = tile.image.get_rect(center = (self.size*tile.x, self.size*tile.y))
+            if tileRect.colliderect(checkPlayerRect) and tile.type not in self.traversableTiles:
+                collision = True
+        for player in self.currentPlayers:
+            playerRect = player.image.get_rect(center = (self.size*player.x, self.size*player.y))
+            if player.index != checkPlayer.index and playerRect.colliderect(checkPlayerRect):
+                collision = True
+        return collision
 
+#
+# process for checking if the produced equation is correct
+#
 
-    #returns if the region being moved into is blocked
-    def isBlocked(self, moveLocation):
-        for playerLocation in self.playerLocations:
-                if playerLocation == [moveLocation[0], moveLocation[1]]:
-                    return True
-        if self.levels[self.currentLevel][moveLocation[1]][moveLocation[0]] in self.traversableTiles:
-            return False
-        return True
+    def determineEquation(self, equalsPos, increment):
+        equation = []
+        equationIndecies = []
+        checkPos = [equalsPos[0], equalsPos[1]+increment]
+        while(self.playerPositionSymbols[checkPos[0]][checkPos[1]] != None):
+            equationIndecies.append(self.playerPositionIndecies[checkPos[0]][checkPos[1]])
+            equation.append(self.playerPositionSymbols[checkPos[0]][checkPos[1]])
+            checkPos[1] += increment
+        print(equationIndecies)
+        return equation, equationIndecies
 
-    #accessed by the Player class
-    def move(self, player, movementType, right):
-        moveOrigin = list(self.playerLocations[player])
-        multiplier = 1
-        if not right:
-            multiplier = -1
+    def validSymbolRotation(self, equationIndecies):
+        print(equationIndecies)
+        valid = True
+        for equationIndeciesSide in equationIndecies:
+            for player in self.currentPlayers:
+                if player.index in equationIndeciesSide:
+                    if player.rotation % 360 != 0:
+                        valid = False
+        return valid
 
-        instructions = copy.deepcopy(self.playerMovementInstruction[movementType])
-        checkList = instructions[0]
-        directions = instructions[1]
+    #converts adjacent digits into multi-digit numbers
+    def order1Calculation(self, equation):
+        digits = "1234567890"
+        #initialised with None to allow for -1 indexing
+        outEquation = [[None], [None]]
+        for equationIndex, equationSide in enumerate(equation):
+            for symbol in equationSide:
+                if symbol in digits:
+                    if type(outEquation[equationIndex][-1]) is int:
+                        outEquation[equationIndex][-1] = outEquation[equationIndex][-1] * 10 + int(symbol)
+                    else:
+                        outEquation[equationIndex].append(int(symbol)) 
+                else:
+                    outEquation[equationIndex].append(symbol)
+        #remove Nones from beginning
+        outEquation[0].pop(0)
+        outEquation[1].pop(0)
+        return outEquation
 
-        for index,check in enumerate(checkList):
-            moveLocation = [moveOrigin[0]+check[0]*multiplier, moveOrigin[1]+check[1]]
-            if self.isBlocked(moveLocation):
-                return directions[index]
-        return directions[-1]
+    #multiplies numbers seperated by an x
+    def order2Calculation(self, equation):
+        #initialised with None to allow for -1 indexing
+        outEquation = [[None], [None]]
+        for equationIndex, equationSide in enumerate(equation):
+            multiply = False
+            for element in equationSide:
+                if multiply and len(outEquation[equationIndex]) > 1:
+                    outEquation[equationIndex][-1] *= element
+                    multiply = False
+                elif element == "x":
+                    multiply = True
+                else:
+                    outEquation[equationIndex].append(element)
+        #remove Nones from beginning
+        outEquation[0].pop(0)
+        outEquation[1].pop(0)
+        return outEquation
 
-    # def isFallBlocked(self, player):
-    #     moveLocation = list(self.playerLocations[player])
-    #     moveLocation[1] += 1
-    #     return self.isBlocked(moveLocation)
+    #adds and subtracts numbers seperated by a + or -        
+    def order3Calculation(self, equation):
+        #initialised with None to allow for -1 indexing
+        outEquation = [[None], [None]]
+        for equationIndex, equationSide in enumerate(equation):
+            add = False
+            subtract = False
+            for element in equationSide:
+                if add and len(outEquation[equationIndex]) > 1:
+                    outEquation[equationIndex][-1] += element
+                    add = False
+                elif subtract and len(outEquation[equationIndex]) > 1:
+                    outEquation[equationIndex][-1] -= element
+                    subtract = False
+                elif element == "+":
+                    add = True
+                elif element == "-":
+                    subtract = True
+                else:
+                    outEquation[equationIndex].append(element)
+        #remove Nones from beginning
+        outEquation[0].pop(0)
+        outEquation[1].pop(0)
+        return outEquation
 
     def checkCompletion(self):
-        level = self.levels[self.currentLevel]
-        complete = True
-
-        for player in self.currentPlayers:
-            playerType = player.type
-            playerIndex = player.index
-            location = self.playerLocations[playerIndex]
-            if level[location[1]][location[0]] != str(playerType):
-                complete = False
-
-        if complete:
-            self.currentLevel += 1
-            self.load()
+        print(self.playerPositionSymbols)
+        rows = len(self.playerPositionSymbols)
+        columns = len(self.playerPositionSymbols[0])
+        equalsPos = []
+        equation = [[], []]
+        equationIndecies = [[], []]
+        for i in range(rows):
+            for j in range(columns):
+                if self.playerPositionSymbols[i][j] == "=":
+                    equalsPos = [i, j]
+        equation[0], equationIndecies[0] = self.determineEquation(equalsPos, -1)
+        if len(equation[0])>0: equation[0].reverse()
+        equation[1], equationIndecies[1] = self.determineEquation(equalsPos, 1)
+        
+        if self.validSymbolRotation(equationIndecies):
+            equation = self.order1Calculation(equation)
+            equation = self.order2Calculation(equation)
+            equation = self.order3Calculation(equation)
+            if equation[0] == equation[1] and equation[0] != []:
+                self.currentLevel += 1
+                self.load()

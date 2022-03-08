@@ -1,156 +1,157 @@
 import pygame
 import math
+from text import Text
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, index, type, size, x, y, world):
         super().__init__()
         self.index = index
         self.type = type
-        self.size = size
         self.x = x
         self.y = y
         self.rotation = 0
+        self.size = size
 
         self.world = world
 
-        self.original_image = pygame.Surface((self.size, self.size)).convert_alpha()
-        if type == 0:
-            self.original_image.fill("red")
-        if type == 1:
-            self.original_image.fill("green")
+        self.original_image = pygame.Surface((size, size)).convert_alpha()
+        self.original_image.fill("white")
         self.image = self.original_image
-        self.rotation = 0
-        self.right = False
-        self.animationFrame = -1
+        
+        self.text = Text(type, x, y, world.font)
 
-        self.directions = []
+        self.instruction = 0
+        self.direction = 1
+        self.jumpDirection = 1
 
-        self.walkAnglePerFrame = 3
         self.walkFrames = 30
+        self.walkRotation = 0
         self.fallFrames = 18
         self.jumpFrames = 24
+        self.jumpedDist = 0
 
-        self.pivot = (0, 0)
+        self.cornerLeeway = 0.2
+
+
+        self.triedDirections = []
+
+    # def updateSize(self, size):
+    #     self.size = size
+    #     self.image = pygame.transform.scale(self.image, (size, size))
 
     def doMovement(self):
-        if len(self.directions) == 0:
-            self.x = round(self.x)
-            self.y = round(self.y)
+        if self.instruction == 0 and self.world.playerChangeCooldown == 0:
             self.checkInputs()
+            #if a movement has just been initiated, remove the player from its previous position
+            if self.instruction != 0:
+                self.world.playerPositionIndecies[round(self.y)][round(self.x)] = None
+                self.world.playerPositionSymbols[round(self.y)][round(self.x)] = None
 
-        if len(self.directions) > 1:
-            nextDirection = self.directions[0]
-            if nextDirection[0] == 0:
-                self.fall(nextDirection[1])
-            if nextDirection[0] == 1:
-                self.walk(nextDirection[1])
-            if nextDirection[0] == 2:
-                self.jump(nextDirection[1])
+        if self.instruction == 1:
+            self.fall()
+        if self.instruction == 2:
+            self.walk()
+        if self.instruction == 3:
+            self.jump()
+        self.triedDirections.clear()
+        self.text.x = self.x - self.world.fontScaler * math.sin(self.rotation*math.pi/180)
+        self.text.y = self.y - self.world.fontScaler * math.cos(self.rotation*math.pi/180)
         
-        if len(self.directions) == 1:
-            shift = self.directions[-1]
-            if not self.right:
-                shift[0] = -shift[0]
-            self.world.updateLocation(self.index, shift)
-            self.directions.pop()
-        
-        self.setRotation()
 
     def checkInputs(self):
-        self.directions = self.world.move(self.index, "fall", True)
-        if len(self.directions) == 0 and self.world.playerChangeCooldown == 0:
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_a]:
-                self.directions = self.world.move(self.index, "walk", False)
-                self.right = False
-            elif keys[pygame.K_d]:
-                self.directions = self.world.move(self.index, "walk", True)
-                self.right = True
-            elif keys[pygame.K_q]:
-                self.directions = self.world.move(self.index, "jump", False)
-                self.right = False
-            elif keys[pygame.K_e]:
-                self.directions = self.world.move(self.index, "jump", True)
-                self.right = True
-            elif keys[pygame.K_w] and self.world.playerChangeCooldown == 0:
-                shift = 1
-                self.world.changePlayer(shift)
-            elif keys[pygame.K_s] and self.world.playerChangeCooldown == 0:
-                shift = -1
-                self.world.changePlayer(shift)
+        keys = pygame.key.get_pressed()
+        if 1 not in self.triedDirections:
+            self.instruction = 1
+            self.triedDirections.append(1)
+        elif keys[pygame.K_a] and [2, -1] not in self.triedDirections:
+            self.instruction = 2
+            self.direction = -1
+            self.walkRotation = self.rotation % 90 + 45
+            self.triedDirections.append([2, -1])
+        elif keys[pygame.K_d] and [2, 1] not in self.triedDirections:
+            self.instruction = 2
+            self.direction = 1
+            self.walkRotation = self.rotation % 90 + 135
+            self.triedDirections.append([2, 1])
+        elif keys[pygame.K_q] and [3, -1] not in self.triedDirections:
+            self.instruction = 3
+            self.direction = -1
+            self.jumpedDist = 0
+            self.jumpDirection = 1
+            self.triedDirections.append([3, -1])
+        elif keys[pygame.K_e] and [3, 1] not in self.triedDirections:
+            self.instruction = 3
+            self.direction = 1
+            self.jumpedDist = 0
+            self.jumpDirection = 1
+            self.triedDirections.append([3, 1])
+        elif keys[pygame.K_w]:
+            shift = 1
+            self.world.changePlayer(shift)
+        elif keys[pygame.K_s]:
+            shift = -1
+            self.world.changePlayer(shift)
 
-    def walk(self, duration):
-        direction = -1
-        if self.right: direction = 1
+    def movementEnd(self):
+        self.instruction = 0
+        self.x = round(self.x*self.size)/self.size
+        self.y = round(self.y*self.size)/self.size
+        self.world.playerPositionIndecies[round(self.y)][round(self.x)] = self.index
+        self.world.playerPositionSymbols[round(self.y)][round(self.x)] = self.type
+        self.doMovement()
 
-        if self.animationFrame == -1:
-            self.animationFrame = (1-duration)*self.walkFrames
-            angle = 90 + direction*45 - direction*self.animationFrame*90/self.walkFrames
-            radians = angle * math.pi / 180
-            self.pivot = (self.x - self.size/math.sqrt(2) * math.cos(radians), self.y + self.size/math.sqrt(2) * math.sin(radians))
-        if self.animationFrame + 1 > self.walkFrames:
-            remainingChange = self.walkFrames - self.animationFrame
-            self.walkMovement(remainingChange, direction)
-            self.animationFrame = -1
-            self.directions.pop(0)
-            return None
+    def fall(self):
+        self.y += 1/self.fallFrames
+        if self.world.collision(self):
+            self.y -= 1/self.fallFrames
+            self.movementEnd()
         
-        self.walkMovement(1, direction)
+    def walk(self):
+        self.walkMovement(90/self.walkFrames)
+        if self.world.collision(self):
+            change = self.rotation % 90
+            if change > 45: change -= 90
+            else: change = -change
+            self.walkMovement(change)
+            self.movementEnd()
 
-    def walkMovement(self, change, direction):
-            self.animationFrame += change
-            angle = 90 + direction*45 - direction*self.animationFrame*90/self.walkFrames
-            radians = angle * math.pi / 180
-            self.x = self.pivot[0] + self.size/math.sqrt(2) * math.cos(radians)
-            self.y = self.pivot[1] - self.size/math.sqrt(2) * math.sin(radians)
-            self.rotation = angle - 90 - direction * 45
-
-    def fall(self, duration):
-        if self.animationFrame == -1:
-            self.animationFrame = 0
-            self.pivot = [self.x, self.y]
-        if self.animationFrame == duration*self.fallFrames:
-            self.animationFrame = -1
-            self.directions.pop(0)
-        else:
-            self.animationFrame += 1
-            self.y = self.pivot[1] + self.size*self.animationFrame/self.fallFrames
-
-    def jump(self, duration):
-        internalDirection = 1
-        initialRotation = 0
-        if duration < 0:
-            internalDirection = -1
-            duration *= -1
-
-        if self.animationFrame == -1:
-            if internalDirection == 1:
-                self.pivot = [self.x, self.y]
-                self.animationFrame = 0
-            else:
-                self.animationFrame = duration*self.jumpFrames
-        
-        self.jumpMovement(internalDirection, initialRotation)
-
-        if self.animationFrame + 1 > duration*self.jumpFrames or self.animationFrame - 1 < 0:
-            if(internalDirection == 1):
-                remainingChange = duration*self.jumpFrames - self.animationFrame
-            else:
-                remainingChange = self.animationFrame
-            self.jumpMovement(remainingChange, initialRotation)
-            self.animationFrame = -1
-            self.directions.pop(0)
-            return None
-
-    def jumpMovement(self, change, initialRotation):
-        direction = -1
-        if self.right: direction = 1
-        self.animationFrame += change
-        xShift = self.animationFrame/self.jumpFrames
-        self.x = direction * self.size * xShift + self.pivot[0]
-        self.y = self.size * (2/3)*(xShift*xShift-4*xShift) + self.pivot[1]
-        self.rotation = initialRotation - direction * self.animationFrame * 90/self.jumpFrames
-
-    def setRotation(self):
+    def walkMovement(self, change):
+        previousRotation = self.walkRotation
+        self.walkRotation -= self.direction * change
+        self.rotation -= self.direction * change
+        self.x += math.sqrt(2)/2*(math.cos(self.walkRotation*math.pi/180) - math.cos(previousRotation*math.pi/180))
+        self.y -= math.sqrt(2)/2*(math.sin(self.walkRotation*math.pi/180) - math.sin(previousRotation*math.pi/180))
         self.image = pygame.transform.rotate(self.original_image, self.rotation)
+        self.text.image = pygame.transform.rotate(self.text.original_image, self.rotation)
 
+    def jump(self):
+        self.jumpMovement(self.jumpDirection/self.jumpFrames)
+        if self.world.collision(self):
+            self.jumpMovement(-self.jumpDirection/self.jumpFrames)
+            if self.rotation % 90 == 0:
+                self.jumpedDist = 0     
+                self.movementEnd()
+            else:
+                angle = 135 - self.rotation % 90
+                cornerX = self.x + math.sqrt(2)/2*(math.cos(angle*math.pi/180))
+                cornerY = self.y + math.sqrt(2)/2*(math.sin(angle*math.pi/180))
+                if cornerX % 1 < 0.5 + self.cornerLeeway and cornerX % 1 > 0.5 - self.cornerLeeway and cornerY % 1 < 0.5 + self.cornerLeeway and cornerY % 1 > 0.5 - self.cornerLeeway:
+                    self.instruction = 2        
+                    self.jumpedDist = 0
+                    self.walkRotation = self.rotation % 90 + 45
+                    cornerX = round(cornerX-0.5)+0.5
+                    cornerY = round(cornerY-0.5)+0.5
+                    self.x = cornerX - math.sqrt(2)/2*(math.cos(angle*math.pi/180))
+                    self.y = cornerY - math.sqrt(2)/2*(math.sin(angle*math.pi/180))
+                else: 
+                    self.instruction = 3
+                    self.jumpDirection = -1
+                self.doMovement()
+
+    def jumpMovement(self, change):
+        self.x += self.direction * change
+        self.y += (2/3)*(((self.jumpedDist+change)*(self.jumpedDist+change)-4*(self.jumpedDist+change)) - (self.jumpedDist*self.jumpedDist-4*self.jumpedDist))
+        self.jumpedDist += change
+        self.rotation -= self.direction * 90 * change
+        self.image = pygame.transform.rotate(self.original_image, self.rotation)
+        self.text.image = pygame.transform.rotate(self.text.original_image, self.rotation)

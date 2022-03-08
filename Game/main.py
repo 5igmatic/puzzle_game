@@ -1,16 +1,20 @@
 import pygame
 from world import World
 
+pygame.init()
+
 WIDTH, HEIGHT = 800, 600
 WIN = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE, vsync=1)
 
 FPS = 60
 size = 80
-startLevel = 1
+startLevel = 3
+fontScaler = 0
+font = pygame.font.SysFont('mathtt', size)
 
 clock = pygame.time.Clock()
 
-world = World(size, startLevel)
+world = World(size, startLevel, font, fontScaler)
 
 def update():
     WIN.fill("black")
