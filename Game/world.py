@@ -6,22 +6,7 @@ class World:
     def __init__(self, size, startLevel, font, fontScaler):
         self.traversableTiles = " 01"
 
-        self.levels = {1: ["ttttttt",
-                           "t     t",
-                           "t    0t",
-                           "ttttttt"],
-            
-                       2: ["ttttttttt",
-                           "t       t",
-                           "t       t",
-                           "t       t",
-                           "tttt   0t",
-                           "   t    t",
-                           "   t    t",
-                           "   t    t",
-                           "   tttttt"],
-                           
-                       3: ["ttttttttt",
+        self.levels = {1: ["ttttttttt",
                            "t       t",
                            "t       t",
                            "t       t",
@@ -29,9 +14,7 @@ class World:
                            "t       t",
                            "ttttttttt"]}
         #playerType (start location)
-        self.levelData = {1: [[0, [2, 2]]],
-                          2: [[0, [2, 2]]],
-                          3: [["4", [6, 4]], ["=", [3, 5]], ["2", [6, 5]], ["x", [5, 5]], ["2", [6, 3]]]}
+        self.levelData = {1: [["4", [6, 4]], ["=", [3, 5]], ["2", [6, 5]], ["x", [5, 5]], ["2", [6, 3]]]}
         self.playerPositionIndecies = []
         self.playerPositionSymbols = []
         self.tiles = pygame.sprite.Group()
@@ -111,12 +94,13 @@ class World:
         for player in self.currentPlayers:
             if player.index == self.activePlayerIndex:
                 player.doMovement()
+                if player.instruction == 0:
+                    self.checkCompletion()
 
         if(self.playerChangeCooldown > 0):
             self.playerChangeCooldown -= 1
             if(self.playerChangeCooldown == 0):
-                self.previousPlayerIndex = self.activePlayerIndex
-        self.checkCompletion()
+                self.previousPlayerIndex = self.activePlayerIndex        
 
     def updateIndividual(self, object, WIN, shiftX, shiftY):
         x = round(self.size*(object.x + shiftX))
@@ -182,11 +166,9 @@ class World:
             equationIndecies.append(self.playerPositionIndecies[checkPos[0]][checkPos[1]])
             equation.append(self.playerPositionSymbols[checkPos[0]][checkPos[1]])
             checkPos[1] += increment
-        print(equationIndecies)
         return equation, equationIndecies
 
     def validSymbolRotation(self, equationIndecies):
-        print(equationIndecies)
         valid = True
         for equationIndeciesSide in equationIndecies:
             for player in self.currentPlayers:
@@ -259,7 +241,6 @@ class World:
         return outEquation
 
     def checkCompletion(self):
-        print(self.playerPositionSymbols)
         rows = len(self.playerPositionSymbols)
         columns = len(self.playerPositionSymbols[0])
         equalsPos = []

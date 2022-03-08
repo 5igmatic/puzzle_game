@@ -8,7 +8,7 @@ WIN = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE, vsync=1)
 
 FPS = 60
 size = 80
-startLevel = 3
+startLevel = 1
 fontScaler = 0
 font = pygame.font.SysFont('mathtt', size)
 
@@ -16,6 +16,7 @@ clock = pygame.time.Clock()
 
 world = World(size, startLevel, font, fontScaler)
 
+#overarching update of entire world
 def update():
     WIN.fill("black")
     world.update(WIN)
@@ -25,6 +26,7 @@ def main():
     world.load()
     while True:
         clock.tick(FPS)
+        #checks for window operations
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
