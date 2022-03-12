@@ -3,20 +3,20 @@ import math
 from text import Text
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, index, type, size, x, y, world):
+    def __init__(self, index, type, x, y, rotation, world):
         super().__init__()
         self.index = index
         self.type = type
         self.x = x
         self.y = y
-        self.rotation = 0
-        self.size = size
+        self.rotation = rotation
+        self.size = world.size
 
         self.world = world
 
-        self.original_image = pygame.Surface((size, size)).convert_alpha()
+        self.original_image = pygame.Surface((self.size, self.size)).convert_alpha()
         self.original_image.fill("white")
-        self.image = self.original_image
+        self.image = pygame.transform.rotate(self.original_image, self.rotation)
         
         self.text = Text(type, x, y, world.font)
 
@@ -54,9 +54,13 @@ class Player(pygame.sprite.Sprite):
         if self.instruction == 3:
             self.jump()
         self.triedDirections.clear()
-        self.text.x = self.x - self.world.fontScaler * math.sin(self.rotation*math.pi/180)
-        self.text.y = self.y - self.world.fontScaler * math.cos(self.rotation*math.pi/180)
-        
+        self.text.x = self.x
+        self.text.y = self.y
+        self.updateRotation()
+
+    def updateRotation(self):
+        self.text.image = pygame.transform.rotate(self.text.original_image, self.rotation)
+        self.image = pygame.transform.rotate(self.original_image, self.rotation)
 
     def checkInputs(self):
         keys = pygame.key.get_pressed()
@@ -122,7 +126,6 @@ class Player(pygame.sprite.Sprite):
         self.x += math.sqrt(2)/2*(math.cos(self.walkRotation*math.pi/180) - math.cos(previousRotation*math.pi/180))
         self.y -= math.sqrt(2)/2*(math.sin(self.walkRotation*math.pi/180) - math.sin(previousRotation*math.pi/180))
         self.image = pygame.transform.rotate(self.original_image, self.rotation)
-        self.text.image = pygame.transform.rotate(self.text.original_image, self.rotation)
 
     def jump(self):
         self.jumpMovement(self.jumpDirection/self.jumpFrames)
@@ -154,4 +157,3 @@ class Player(pygame.sprite.Sprite):
         self.jumpedDist += change
         self.rotation -= self.direction * 90 * change
         self.image = pygame.transform.rotate(self.original_image, self.rotation)
-        self.text.image = pygame.transform.rotate(self.text.original_image, self.rotation)

@@ -1,7 +1,7 @@
 import pygame
 
 class Tile(pygame.sprite.Sprite):
-    def __init__(self, tile, location, size):
+    def __init__(self, tile, x, y, size):
         super().__init__()
 
         self.image = pygame.Surface((size, size)).convert_alpha()
@@ -9,8 +9,8 @@ class Tile(pygame.sprite.Sprite):
         if tile == "t":
             self.image.fill("grey")
         
-        self.x = location[0]
-        self.y = location[1]
+        self.x = x
+        self.y = y
 
     # def updateSize(self, size):
     #     self.size = size
