@@ -11,11 +11,16 @@ class Level:
         self.WIN = WIN
         self.MENU = MENU
         self.levelActive = False
+        self.editorLevel = False
 
         width = self.WIN.get_width()
         self.exitButton = pygame.surface.Surface((20, 20)).convert_alpha()
         self.exitButton.fill("white")
         self.exitButtonRect = self.exitButton.get_rect(center = (width-20, 20))
+
+        self.restartButton = pygame.surface.Surface((20, 20)).convert_alpha()
+        self.restartButton.fill("white")
+        self.restartButtonRect = self.restartButton.get_rect(center = (width-60, 20))
 
 
         #playerType (start location)
@@ -55,7 +60,7 @@ class Level:
             for object in rowObjects:
                 if object != " ":
                     if object == "t":
-                        self.tiles.add(Tile(object, columnIndex, rowIndex, self.size))
+                        self.tiles.add(Tile(columnIndex, rowIndex, self.size))
                     else:
                         playerRotation = int(rowRotations[columnIndex]) * 90
                         player = Player(playerIndex, object, columnIndex, rowIndex, playerRotation, self)
@@ -150,14 +155,14 @@ class Level:
             self.updateIndividual(player, shiftX, shiftY)
             self.updateIndividual(player.text, shiftX, shiftY)
         self.WIN.blit(self.exitButton, self.exitButtonRect)
+        self.WIN.blit(self.restartButton, self.restartButtonRect)
 
     def collision(self, checkPlayer):
-        traversableTiles = " 01"
         collision = False
         checkPlayerRect = checkPlayer.image.get_rect(center = (round(self.size*checkPlayer.x), round(self.size*checkPlayer.y)))
         for tile in self.tiles:
             tileRect = tile.image.get_rect(center = (self.size*tile.x, self.size*tile.y))
-            if tileRect.colliderect(checkPlayerRect) and tile.type not in traversableTiles:
+            if tileRect.colliderect(checkPlayerRect):
                 collision = True
         for player in self.currentPlayers:
             playerRect = player.image.get_rect(center = (self.size*player.x, self.size*player.y))
@@ -261,7 +266,7 @@ class Level:
     def checkCompletion(self):
         rows = len(self.playerPositionSymbols)
         columns = len(self.playerPositionSymbols[0])
-        equalsPos = []
+        equalsPos = None
         equation = [[], []]
         equationIndecies = [[], []]
 

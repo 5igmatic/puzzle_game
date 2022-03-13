@@ -1,13 +1,11 @@
 import pygame
 
 class Tile(pygame.sprite.Sprite):
-    def __init__(self, tile, x, y, size):
+    def __init__(self, x, y, size):
         super().__init__()
 
         self.image = pygame.Surface((size, size)).convert_alpha()
-        self.type = tile
-        if tile == "t":
-            self.image.fill("grey")
+        self.image.fill("grey")
         
         self.x = x
         self.y = y

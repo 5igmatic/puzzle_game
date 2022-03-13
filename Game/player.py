@@ -3,22 +3,22 @@ import math
 from text import Text
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, index, type, x, y, rotation, world):
+    def __init__(self, index, type, x, y, rotation, level):
         super().__init__()
         self.index = index
         self.type = type
         self.x = x
         self.y = y
         self.rotation = rotation
-        self.size = world.size
+        self.size = level.size
 
-        self.world = world
+        self.level = level
 
         self.original_image = pygame.Surface((self.size, self.size)).convert_alpha()
         self.original_image.fill("white")
         self.image = pygame.transform.rotate(self.original_image, self.rotation)
         
-        self.text = Text(type, x, y, world.font)
+        self.text = Text(type, x, y, level.font)
 
         self.instruction = 0
         self.direction = 1
@@ -40,12 +40,12 @@ class Player(pygame.sprite.Sprite):
     #     self.image = pygame.transform.scale(self.image, (size, size))
 
     def doMovement(self):
-        if self.instruction == 0 and self.world.playerChangeCooldown == 0:
+        if self.instruction == 0 and self.level.playerChangeCooldown == 0:
             self.checkInputs()
             #if a movement has just been initiated, remove the player from its previous position
             if self.instruction != 0:
-                self.world.playerPositionIndecies[round(self.y)][round(self.x)] = None
-                self.world.playerPositionSymbols[round(self.y)][round(self.x)] = None
+                self.level.playerPositionIndecies[round(self.y)][round(self.x)] = None
+                self.level.playerPositionSymbols[round(self.y)][round(self.x)] = None
 
         if self.instruction == 1:
             self.fall()
@@ -91,28 +91,28 @@ class Player(pygame.sprite.Sprite):
             self.triedDirections.append([3, 1])
         elif keys[pygame.K_w]:
             shift = 1
-            self.world.changePlayer(shift)
+            self.level.changePlayer(shift)
         elif keys[pygame.K_s]:
             shift = -1
-            self.world.changePlayer(shift)
+            self.level.changePlayer(shift)
 
     def movementEnd(self):
         self.instruction = 0
         self.x = round(self.x*self.size)/self.size
         self.y = round(self.y*self.size)/self.size
-        self.world.playerPositionIndecies[round(self.y)][round(self.x)] = self.index
-        self.world.playerPositionSymbols[round(self.y)][round(self.x)] = self.type
+        self.level.playerPositionIndecies[round(self.y)][round(self.x)] = self.index
+        self.level.playerPositionSymbols[round(self.y)][round(self.x)] = self.type
         self.doMovement()
 
     def fall(self):
         self.y += 1/self.fallFrames
-        if self.world.collision(self):
+        if self.level.collision(self):
             self.y -= 1/self.fallFrames
             self.movementEnd()
         
     def walk(self):
         self.walkMovement(90/self.walkFrames)
-        if self.world.collision(self):
+        if self.level.collision(self):
             change = self.rotation % 90
             if change > 45: change -= 90
             else: change = -change
@@ -129,7 +129,7 @@ class Player(pygame.sprite.Sprite):
 
     def jump(self):
         self.jumpMovement(self.jumpDirection/self.jumpFrames)
-        if self.world.collision(self):
+        if self.level.collision(self):
             self.jumpMovement(-self.jumpDirection/self.jumpFrames)
             if self.rotation % 90 == 0:
                 self.jumpedDist = 0     
