@@ -1,7 +1,7 @@
 # puzzle_game
 
 General:
-Exit to main menu with right-most button
+Exit to main menu with right-most button \n
 Restart level/editor with second right-most button
 Play level in editor with left-most button
 
